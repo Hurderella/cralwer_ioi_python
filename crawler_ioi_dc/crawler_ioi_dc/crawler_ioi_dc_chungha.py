@@ -17,7 +17,7 @@ sohye_normal = "http://gall.dcinside.com/board/view/?id=kimsohye&no=76800"
 sohye_err = "http://gall.dcinside.com/board/view/?id=kimsohye&no=75906"
 sohye_empty_image = "http://gall.dcinside.com/board/view/?id=kimsohye&no=76799"
 
-#chungha = "http://gall.dcinside.com/board/view/?id=chungha"
+chungha = "http://gall.dcinside.com/board/view/?id=chungha"
 
 hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
 					'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -39,20 +39,28 @@ if __name__ == "__main__":
 	print("Hi DC");
 	reload(sys)
 	sys.setdefaultencoding('utf-8')
-	#sys.stdout = Logger("chungha_log.txt")
-	sys.stdout = Logger("log.txt")			
+	sys.stdout = Logger("chungha_log.txt")
+	#sys.stdout = Logger("log.txt")			
+	
+	img_db_file = open("./chungha_db.txt", 'a')
 
-	for no in range(55, 70):
-		#dirname = "D:\\ioi_chungha\\"	
-		#path = chungha + "&no=" + str(no)
-		dirname = "D:\\ioi_sohye\\"
-		path = sohye + "&no=" + str(no)
+	for no in range(500, 500):
+		dirname = "D:\\ioi_chungha\\"	
+		path = chungha + "&no=" + str(no)
+		#dirname = "D:\\ioi_sohye\\"
+		#path = sohye + "&no=" + str(no)
 		print("No : " + str(no) + "-----------")
 		
 		req = urllib2.Request(path, headers = hdr)
 
 		print(path)
-		data = urllib2.urlopen(req).read()
+		for attempt in range(10):
+			try:
+				data = urllib2.urlopen(req, timeout = 5000).read()
+			except:
+				print("Except!!! " + path)
+				continue
+			break
 											
 		name_list = [];
 		img_url_list = [];
@@ -74,29 +82,35 @@ if __name__ == "__main__":
 
 		for img in soup.find_all('img'):
 			img_link = img.get('src')
+			if img.get('alt') != None : 
+				continue
 			if img_link[0:12] == "http://dcimg":
 				img_url_list.append(img_link)
+				
 
 		for i in range(0, len(name_list)):
 			print("path :: " + img_url_list[i])
 			if img_url_list[i][12] == u'1':
 				img_url_list[i] = img_url_list[i].replace("http://dcimg1", "http://dcimg2")
 				print("path change => %s" % (img_url_list[i]))
+			img_db_file.write(img_url_list[i] + "\n")	
 				
-			img_req = urllib2.Request(img_url_list[i], headers = hdr);
-			#try:
-			res = urllib2.urlopen(img_req)
+		#	img_req = urllib2.Request(img_url_list[i], headers = hdr);
+		#	#try:
+		#	res = urllib2.urlopen(img_req, timeout = 5000)
 			
-			ano_i = 1;
-			while(os.path.exists(name_list[i])):
-				filename, file_extension = os.path.splitext(name_list[i])
-				anoname = filename + "_" + str(ano_i) + file_extension
-				ano_i += 1
-				name_list[i] = anoname
-			print(name_list[i])
-			wif = open(name_list[i], "wb");
-			wif.write(res.read());
-			wif.close()
-		time.sleep(2)
+		#	ano_i = 1;
+		#	while(os.path.exists(name_list[i])):
+		#		filename, file_extension = os.path.splitext(name_list[i])
+		#		anoname = filename + "_" + str(ano_i) + file_extension
+		#		ano_i += 1
+		#		name_list[i] = anoname
+		#	print(name_list[i])
+		#	wif = open(name_list[i], "wb");
+		#	wif.write(res.read());
+		#	wif.close()
+		#	time.sleep(1)
+		#time.sleep(1)
+		
 
-
+	img_db_file.close()
