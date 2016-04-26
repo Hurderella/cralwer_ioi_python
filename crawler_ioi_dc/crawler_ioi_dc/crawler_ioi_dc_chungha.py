@@ -35,33 +35,38 @@ class Logger(object):
         self.terminal.write(message)
         self.log.write(message)
 
+def urlopen_try(req, timeout, try_count = 10, err_log = "Occur Exception") :
+	for attemp in range(try_count):
+		try:
+			data = urllib2.urlopen(req, timeout = timeout)
+		except:
+			print(err_log)
+			continue
+		break;
+	return data
+
+
 if __name__ == "__main__":
 	print("Hi DC");
 	reload(sys)
 	sys.setdefaultencoding('utf-8')
 	sys.stdout = Logger("chungha_log.txt")
-	#sys.stdout = Logger("log.txt")			
 	
-	img_db_file = open("./chungha_db.txt", 'a')
+	dirname = "./chungha/"
+	if not os.path.exists(dirname):
+		os.mkdir(dirname)
 
-	for no in range(500, 500):
-		dirname = "D:\\ioi_chungha\\"	
+	for no in range(917, 2000): #917 occur error
+		
 		path = chungha + "&no=" + str(no)
-		#dirname = "D:\\ioi_sohye\\"
-		#path = sohye + "&no=" + str(no)
+		
 		print("No : " + str(no) + "-----------")
 		
 		req = urllib2.Request(path, headers = hdr)
 
 		print(path)
-		for attempt in range(10):
-			try:
-				data = urllib2.urlopen(req, timeout = 5000).read()
-			except:
-				print("Except!!! " + path)
-				continue
-			break
-											
+		data = urlopen_try(req, timeout = 5000, err_log = "Except!!! " + path).read()
+													
 		name_list = [];
 		img_url_list = [];
 
@@ -93,24 +98,23 @@ if __name__ == "__main__":
 			if img_url_list[i][12] == u'1':
 				img_url_list[i] = img_url_list[i].replace("http://dcimg1", "http://dcimg2")
 				print("path change => %s" % (img_url_list[i]))
-			img_db_file.write(img_url_list[i] + "\n")	
-				
-		#	img_req = urllib2.Request(img_url_list[i], headers = hdr);
-		#	#try:
-		#	res = urllib2.urlopen(img_req, timeout = 5000)
-			
-		#	ano_i = 1;
-		#	while(os.path.exists(name_list[i])):
-		#		filename, file_extension = os.path.splitext(name_list[i])
-		#		anoname = filename + "_" + str(ano_i) + file_extension
-		#		ano_i += 1
-		#		name_list[i] = anoname
-		#	print(name_list[i])
-		#	wif = open(name_list[i], "wb");
-		#	wif.write(res.read());
-		#	wif.close()
-		#	time.sleep(1)
-		#time.sleep(1)
+			#img_db_file.write(img_url_list[i] + "\n")	
+
+			img_req = urllib2.Request(img_url_list[i], headers = hdr);
+			res = urlopen_try(img_req, timeout = 5000, err_log = "Download url open Except!!!")
+								
+			ano_i = 1;
+			while(os.path.exists(name_list[i])):
+				filename, file_extension = os.path.splitext(name_list[i])
+				anoname = filename + "_" + str(ano_i) + file_extension
+				ano_i += 1
+				name_list[i] = anoname
+			print(name_list[i])
+			wif = open(name_list[i], "wb");
+			wif.write(res.read());
+			wif.close()
+			time.sleep(1)
+		time.sleep(1)
 		
 
-	img_db_file.close()
+	#img_db_file.close()
