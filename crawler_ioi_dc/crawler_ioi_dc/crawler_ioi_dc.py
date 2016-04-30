@@ -38,11 +38,13 @@ class Logger(object):
         self.log.write(message)
 
 def urlopen_try(req, timeout, try_count = 10, err_log = "Occur Exception") :
+	data = ""
 	for attemp in range(try_count):
 		try:
 			data = urllib2.urlopen(req, timeout = timeout)
 		except:
 			print(err_log)
+			time.sleep(5)
 			continue
 		break;
 	return data
@@ -60,7 +62,7 @@ if __name__ == "__main__":
 		os.mkdir(dirname)
 
 	#for no in range(1244, 1245): #917 occur error
-	for no in range(sys.argv[2], sys.argv[3]):
+	for no in range(int(sys.argv[2]), int(sys.argv[3])):
 		
 		path = base_path + gall_owner + "&no=" + str(no)
 		
@@ -70,7 +72,8 @@ if __name__ == "__main__":
 
 		print(path)
 		data = urlopen_try(req, timeout = 5000, err_log = "Except!!! " + path).read()
-													
+		if data == "":
+			continue							
 		name_list = [];
 		img_url_list = [];
 
@@ -105,7 +108,9 @@ if __name__ == "__main__":
 			
 			img_req = urllib2.Request(img_url_list[i], headers = hdr);
 			res = urlopen_try(img_req, timeout = 5000, err_log = "Download url open Except!!!")
-								
+			if res == "" :
+				continue
+
 			ano_i = 1;
 			while (os.path.exists(name_list[i])):
 				filename, file_extension = os.path.splitext(name_list[i])

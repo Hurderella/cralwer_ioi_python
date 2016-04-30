@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dc7de52e-44ba-4b94-bca0-d33ef44dea46</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>crawler_ioi_dc_chungha.py</StartupFile>
+    <StartupFile>make_credentials.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -14,6 +14,7 @@
     <RootNamespace>crawler_ioi_dc</RootNamespace>
     <InterpreterId>{2af0f10d-7135-4994-9156-5d01c9c11b7e}</InterpreterId>
     <InterpreterVersion>2.7</InterpreterVersion>
+    <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -24,8 +25,13 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="crawler_ioi_dc.py" />
-    <Compile Include="crawler_ioi_dc_chungha.py">
+    <Compile Include="crawler_ioi_dc.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="imgur_adapter.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="make_credentials.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="print_test.py">
