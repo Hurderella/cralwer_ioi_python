@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dc7de52e-44ba-4b94-bca0-d33ef44dea46</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>make_credentials.py</StartupFile>
+    <StartupFile>imgur_uploader.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -29,6 +29,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="imgur_adapter.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="imgur_uploader.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="make_credentials.py">
