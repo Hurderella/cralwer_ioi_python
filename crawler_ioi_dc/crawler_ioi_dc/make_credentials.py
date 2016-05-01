@@ -6,8 +6,8 @@ import getopt
 
 def main(argv):
 	
-	client_id = '...........'
-	client_secret = '............'
+	client_id = '..............'
+	client_secret = '...................'
 	pin = ""
 
 	client = ImgurClient(client_id, client_secret)
@@ -16,13 +16,13 @@ def main(argv):
 	usage += "\nauthorization url : \n\t" + authorization_url
 	
 	try:
-		opts, args = getopt.getopt(argv, "hp:", ["--pin="])
+		opts, args = getopt.getopt(argv, "hp:", ["pin="])
 		
 		for opt, arg in opts:
 			if opt == "-h":
 				print(usage)
 				sys.exit(2)
-			elif opt in ("-p", "--pin="):
+			elif opt in ("-p", "--pin"):
 				pin = arg
 		
 		credentials = client.authorize(pin, 'pin')
