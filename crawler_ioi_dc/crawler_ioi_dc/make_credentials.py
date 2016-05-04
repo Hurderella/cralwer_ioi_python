@@ -6,8 +6,8 @@ import getopt
 
 def main(argv):
 	
-	client_id = '..............'
-	client_secret = '...................'
+	client_id = '.............'
+	client_secret = '.............'
 	pin = ""
 
 	client = ImgurClient(client_id, client_secret)
