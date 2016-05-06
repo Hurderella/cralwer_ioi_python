@@ -23,18 +23,6 @@ class Logger(object):
         self.terminal.write(message)
         self.log.write(message)
 
-#def urlopen_try(req, timeout, requeue, err_log = "Occur Exception") :
-#	data = ""
-#	try:
-#		data = urllib2.urlopen(req, timeout = timeout)
-#	except:
-#		print(err_log)
-#		requeue.put(req)
-#		time.sleep(5)
-		
-	
-#	return data
-
 
 class ImgDownloader(threading.Thread):
 	def __init__(self, _img_down_info_queue):
@@ -74,8 +62,7 @@ class ImgDownloader(threading.Thread):
 				print("Download url open Except!!!")
 				self.img_down_info_queue.put(tuple(info))
 				time.sleep(5)
-				continue
-
+				
 			self.img_down_info_queue.task_done()
 
 
@@ -85,7 +72,7 @@ class ImgDownLinkCrawler(threading.Thread):
 		self.page_queue = _page_queue
 		self.img_down_info_queue = _img_down_info_queue
 		self.destDir = destDir
-	
+		
 	def run(self):
 		while True:
 			page_num = self.page_queue.get()
@@ -93,11 +80,8 @@ class ImgDownLinkCrawler(threading.Thread):
 			
 			print("No : " + str(page_num) + "-----------")
 			
-
-			#crawler 
 			print(path)
-			#data = urlopen_try(req, timeout = 10000, self.page_queue,
-			#					err_log = "Except!!! " + path).read()
+
 			try:
 				req = urllib2.Request(path, headers = hdr)
 				data = urllib2.urlopen(req, timeout = 5000).read()
@@ -117,6 +101,8 @@ class ImgDownLinkCrawler(threading.Thread):
 					if l.get('class') != None and l.get('class')[0] == u'icon_pic' :
 						for link in l.contents:
 							filename, file_extension = os.path.splitext(link.contents[0])
+							if len(file_extension) > 5 or len(file_extension) < 4 :
+								raise IndexError
 							name = gall_owner + "_IMG_" + str(page_num) + file_extension.encode("euc-kr")
 							print(name)
 							
@@ -129,7 +115,7 @@ class ImgDownLinkCrawler(threading.Thread):
 					if img_link[0:12] == "http://dcimg":
 						img_url_list.append(img_link)
 
-				visit_list.append(page_num)
+				
 			except IndexError as e:
 				print("EMPTY NAME ERROR : " + e.message)
 
@@ -139,30 +125,38 @@ class ImgDownLinkCrawler(threading.Thread):
 				print("[%d] : %s" % (i, name_list[i]))
 				print("[%d] : %s" % (i, img_url_list[i]))
 				self.img_down_info_queue.put((name_list[i], img_url_list[i]))
-
+			
+			visit_list.append(page_num)
+			vl = open(db_file, "a");
+			vl.writelines(page_num + "\n")
+			vl.close()
 			self.page_queue.task_done()
 
 class WatchGall(threading.Thread):
-	def __init__(self, gall_owner, page_func):
+	def __init__(self, gall_owner, page_func, sleep_count = 10, limit = 0):
 		threading.Thread.__init__(self)
 		self.gall_owner = gall_owner
 		self.page_func = page_func
-	
+		self.limit = limit
+		self.sleep_count = sleep_count
+		self.page = 1
+
 	def run(self):
-		page = 1
-		page = self.page_func(page)
+		loop = 0
 		while True:
-			
-			path = "http://gall.dcinside.com/board/view/?id=" + gall_owner + "&page=" + str(page)
+			self.page = self.page_func(self.page)
+			if self.limit < loop:
+				print("Approach Limit")
+				break;
+			loop += 1
+			path = "http://gall.dcinside.com/board/lists/?id=" + gall_owner + "&page=" + str(self.page)
 	
 			print(path)
 	
-			#data = urlopen_try(req, timeout = 10000, err_log = "Except!!! " + path).read()
 			try:
 				req = urllib2.Request(path, headers = hdr)
 				data = urllib2.urlopen(req, timeout = 5000).read()
-				#self.img_down_info.queue.put(tuple(info))
-
+				
 				if data == "":
 					return False				
 	
@@ -177,12 +171,13 @@ class WatchGall(threading.Thread):
 			except:
 				print("Except!!! " + path)
 			finally:
-				time.sleep(10)
-			break;
+				time.sleep(self.sleep_count)
+			
 
 visit_list = []
 img_page_queue = Queue.Queue()
 img_down_info_queue = Queue.Queue()
+db_file = "./visit_db.txt"
 
 if __name__ == "__main__":
 	print("Hi DC");
@@ -199,21 +194,19 @@ if __name__ == "__main__":
 			os.mkdir(dirname)
 
 	#download check
-
-	#vl = open("./visit_db", r);
-	#for l in vl.readlines():
-	#	visit_list.append(l)
-	#vl.close()
 	
-	#page1st_craw_th = threading.Thread(target = page1st_crawler, args = (gall_owner, ))
-	#page1st_craw_th.setDaemon(True)
-	#page1st_craw_th.start()
+	if os.path.exists(db_file):
+		vl = open(db_file, "r");
+		for l in vl.readlines():
+			visit_list.append(l.rstrip())
+		vl.close()
 
-	#page1_watch_dog = WatchGall(gall_owner, lambda x: 1)
-	#page1_watch_dog.setDaemon(True)
-	#page1_watch_dog.start()
 
-	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1)
+	page1_watch_dog = WatchGall(gall_owner, lambda x: 1, sleep_count = 60, limit = 3)
+	page1_watch_dog.setDaemon(True)
+	page1_watch_dog.start()
+
+	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, limit = 10)
 	page_all_watch_dog.setDaemon(True)
 	page_all_watch_dog.start()
 
@@ -225,7 +218,7 @@ if __name__ == "__main__":
 	imgDownTh.setDaemon(True)
 	imgDownTh.start()
 			
-	#page1_watch_dog.join()
+	page1_watch_dog.join()
 	page_all_watch_dog.join()
 	imgDownLinkTh.page_queue.join()
 	imgDownTh.img_down_info_queue.join()
