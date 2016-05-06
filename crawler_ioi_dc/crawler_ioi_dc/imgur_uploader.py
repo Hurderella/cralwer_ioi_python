@@ -52,27 +52,25 @@ def update_img_info(client, img_id):
 	res_json = json.loads(res_data.read())
 	print(res_json)
 
-def get_album_id(client, user, album_name):
+def get_x_mash_limit(client):
+	req_url = "https://imgur-apiv3.p.mashape.com/3/credits"
+		#"https://imgur-apiv3.p.mashape.com/3/account/%s/album/%s" % (user, album_id)
+	req = urllib2.Request(req_url, headers = {
+			"X-Mashape-Key" : x_mash_key,
+			"Authorization" : "Bearer " + client.auth.get_current_access_token(),
+			"Accept": "application/json"
+		})
+	res_data = urllib2.urlopen(req, timeout = 5000)
 	
-	res = client.get_account_album_ids(user)
-	print(res)
-	for album_id in res:
-		print(">>>>>> " + album_id)
-		req_url = "https://imgur-apiv3.p.mashape.com/3/account/%s/album/%s" % (user, album_id)
-		req = urllib2.Request(req_url, headers = {
-				"X-Mashape-Key" : x_mash_key,
-				"Authorization" : "Bearer " + client.auth.get_current_access_token(),
-				"Accept": "application/json"
-			})
-		res_data = urllib2.urlopen(req, timeout = 5000)
-		res_json = json.loads(res_data.read())
-		print(res_json)
-		#if res_json["data"]["title"] == album_name:
-		#	return album_id
-	
+	# print("-----------")
+	# print(res_data.info().getheader("X-Ratelimit-Uploads-Remaining"))
+	res_json = json.loads(res_data.read())
+	# print(res_json["data"]["UserReset"])
+	return (res_data.info().getheader("X-Ratelimit-Uploads-Remaining"), res_json["data"]["UserReset"])
+
 
 def get_access_token():
-	
+
 	if not os.path.exists("./token.txt"):
 		print("Need Token File. Run make_credential.py")
 		sys.exit(2)
@@ -87,15 +85,12 @@ def get_access_token():
 def main(s_argv):
 	argv = s_argv
 	
-	argv["source"] = "../data/chung_2982/"
 	argv["user"] = "hurderella"
-	argv["album"] = "chungha_ioi"
+	argv["album"] = "youjung_ioi"#"chungha_ioi"
 	argv["dump"] = "dump.txt"
-	argv["inlog"] = "chungha_log.txt"
-	argv["start"] = "15"
-	argv["end"] = "20"
+	argv["save_path"] = "./save_list.txt"
+	argv["complete_path"] = "./complete.txt"
 	
-	img_source = argv["source"] #"./sohye_img/"
 	
 	name_list = []
 	img_oriUrl_list = []
@@ -113,7 +108,12 @@ def main(s_argv):
 	client.mashape_key = x_mash_key
 	#print(client.credits["ClientLimit"])
 	#print("usr : %s, album : %s" % (argv["user"], argv["album"]))
-	album_id = get_album_id(client, argv["user"], argv["album"])
+	# album_id = get_album_id(client, argv["user"], argv["album"])
+
+	x_mash_info = get_x_mash_limit(client)
+	remain = int(x_mash_info[0])
+
+	
 
 	#if album_id == "" and album_id == None:
 	#	print("Need Valid Album Name")

@@ -1,5 +1,7 @@
 #-*- coding: utf-8 -*-
 from bs4 import BeautifulSoup
+from imgurpython import ImgurClient
+import imgur_uploader
 import httplib, urllib, urllib2
 import os, sys
 import time
@@ -25,9 +27,10 @@ class Logger(object):
 
 
 class ImgDownloader(threading.Thread):
-	def __init__(self, _img_down_info_queue):
+	def __init__(self, _img_down_info_queue, _img_upload_queue):
 		threading.Thread.__init__(self)
 		self.img_down_info_queue = _img_down_info_queue
+		self.img_up_queue = _img_upload_queue
 
 	def run(self):
 		while True:
@@ -57,7 +60,12 @@ class ImgDownloader(threading.Thread):
 				wif = open(str(info[0]), "wb");
 				wif.write(res.read());
 				wif.close()
-			
+
+				save_list = open(save_path, "a")
+				save_list.writelines(str(info[0]) + "\n")
+				save_list.close()
+
+				self.img_up_queue.put(str(info[0]))
 			except:
 				print("Download url open Except!!!")
 				self.img_down_info_queue.put(tuple(info))
@@ -174,10 +182,67 @@ class WatchGall(threading.Thread):
 				time.sleep(self.sleep_count)
 			
 
+class ImgUploader(threading.Thread):
+	def __init__(self, _img_upload_queue):
+		threading.Thread.__init__(self)
+		self.img_upload_queue = _img_upload_queue
+
+		complete_list = []
+		if os.path.exists(complete_path):
+			complete_list_file = open(complete_path, "r")
+			for l in complete_list_file.readlines():
+				complete_list.append(l.rsplit()[0])
+
+			complete_list_file.close()
+
+		if os.path.exists(save_path):
+			save_list_file = open(save_path, "r")
+			for l in save_list_file.readlines():
+				if not l in complete_list : 
+					self.img_upload_queue.put(l.rsplit()[0])
+
+			save_list_file.close()
+		
+		_access_token, _refresh_token = imgur_uploader.get_access_token()
+		print(_access_token)
+		print(_refresh_token)
+		
+		self.client = imgur_uploader.ImgurClient(imgur_uploader.client_id, imgur_uploader.client_secret)
+		self.client.set_user_auth(_access_token, _refresh_token)
+		self.client.mashape_key = imgur_uploader.x_mash_key
+
+	def run(self):
+		while True:
+			upload_file_path = self.img_upload_queue.get()
+			print(">" + upload_file_path)
+
+			x_mash_info = imgur_uploader.get_x_mash_limit(self.client)
+			remain = int(x_mash_info[0])
+			print("upload remain : " + str(remain))
+			if remain < 2:
+				break
+			album_id = "oXvZ7"
+			filename = os.path.basename(upload_file_path)
+			imgur_uploader.img_upload(self.client, upload_file_path, album_id, filename)
+
+			complete_list_file = open(complete_path, "a")
+			complete_list_file.writelines(upload_file_path + "\n")
+			complete_list_file.close()
+
+			self.img_upload_queue.task_done()
+			
+
+
+
+
+
 visit_list = []
 img_page_queue = Queue.Queue()
 img_down_info_queue = Queue.Queue()
+img_upload_queue = Queue.Queue()
 db_file = "./visit_db.txt"
+save_path = "./save_list.txt"
+complete_path = "./complete_list.txt"
 
 if __name__ == "__main__":
 	print("Hi DC");
@@ -185,11 +250,11 @@ if __name__ == "__main__":
 	sys.setdefaultencoding('utf-8')
 
 	argv = sys.argv
-
-	gall_owner = "kimsohye"#"youjung"#argv[1]#"chungha" 
+	#youjung album : oXvZ7
+	gall_owner = "youjung"#argv[1]#"chungha" 
 	#sys.stdout = Logger(gall_owner + "_log.txt")
 	
-	dirname = "./sohye_que/"
+	dirname = "./youjung_que/"
 	if not os.path.exists(dirname):
 			os.mkdir(dirname)
 
@@ -202,11 +267,11 @@ if __name__ == "__main__":
 		vl.close()
 
 
-	page1_watch_dog = WatchGall(gall_owner, lambda x: 1, sleep_count = 60, limit = 3)
+	page1_watch_dog = WatchGall(gall_owner, lambda x: 1, sleep_count = 10)
 	page1_watch_dog.setDaemon(True)
 	page1_watch_dog.start()
 
-	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, limit = 10)
+	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, limit = 50)
 	page_all_watch_dog.setDaemon(True)
 	page_all_watch_dog.start()
 
@@ -214,15 +279,25 @@ if __name__ == "__main__":
 	imgDownLinkTh.setDaemon(True)
 	imgDownLinkTh.start()
 	
-	imgDownTh = ImgDownloader(img_down_info_queue)
+	imgDownTh = ImgDownloader(img_down_info_queue, img_upload_queue)
 	imgDownTh.setDaemon(True)
 	imgDownTh.start()
-			
+
+	imgUpTh = ImgUploader(img_upload_queue)
+	imgUpTh.setDaemon(True)
+	imgUpTh.start()
+
+
+
+	# imgUpTh.img_upload_queue.join()
+	imgUpTh.join()
+	sys.exit(2)
+
 	page1_watch_dog.join()
 	page_all_watch_dog.join()
 	imgDownLinkTh.page_queue.join()
 	imgDownTh.img_down_info_queue.join()
-
+	
 
 
 
