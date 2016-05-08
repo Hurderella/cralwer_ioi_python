@@ -141,13 +141,13 @@ class ImgDownLinkCrawler(threading.Thread):
 			self.page_queue.task_done()
 
 class WatchGall(threading.Thread):
-	def __init__(self, gall_owner, page_func, sleep_count = 10, limit = 0):
+	def __init__(self, gall_owner, page_func, start_page, sleep_count = 10, limit = 0):
 		threading.Thread.__init__(self)
 		self.gall_owner = gall_owner
 		self.page_func = page_func
 		self.limit = limit
 		self.sleep_count = sleep_count
-		self.page = 1
+		self.page = start_page
 
 	def run(self):
 		loop = 0
@@ -183,9 +183,10 @@ class WatchGall(threading.Thread):
 			
 
 class ImgUploader(threading.Thread):
-	def __init__(self, _img_upload_queue):
+	def __init__(self, _img_upload_queue, _album_id):
 		threading.Thread.__init__(self)
 		self.img_upload_queue = _img_upload_queue
+		self.upload_album_id = _album_id
 
 		complete_list = []
 		if os.path.exists(complete_path):
@@ -221,19 +222,15 @@ class ImgUploader(threading.Thread):
 			print("upload remain : " + str(remain))
 			if remain < 2:
 				break
-			album_id = "oXvZ7"
+
 			filename = os.path.basename(upload_file_path)
-			imgur_uploader.img_upload(self.client, upload_file_path, album_id, filename)
+			imgur_uploader.img_upload(self.client, upload_file_path, self.upload_album_id, filename)
 
 			complete_list_file = open(complete_path, "a")
 			complete_list_file.writelines(upload_file_path + "\n")
 			complete_list_file.close()
 
 			self.img_upload_queue.task_done()
-			
-
-
-
 
 
 visit_list = []
@@ -243,6 +240,7 @@ img_upload_queue = Queue.Queue()
 db_file = "./visit_db.txt"
 save_path = "./save_list.txt"
 complete_path = "./complete_list.txt"
+album_id = "oXvZ7"
 
 if __name__ == "__main__":
 	print("Hi DC");
@@ -271,9 +269,9 @@ if __name__ == "__main__":
 	page1_watch_dog.setDaemon(True)
 	page1_watch_dog.start()
 
-	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, limit = 50)
-	page_all_watch_dog.setDaemon(True)
-	page_all_watch_dog.start()
+	# page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, start_page = 2, limit = 50)
+	# page_all_watch_dog.setDaemon(True)
+	# page_all_watch_dog.start()
 
 	imgDownLinkTh = ImgDownLinkCrawler(img_page_queue, img_down_info_queue, dirname)
 	imgDownLinkTh.setDaemon(True)
@@ -283,10 +281,9 @@ if __name__ == "__main__":
 	imgDownTh.setDaemon(True)
 	imgDownTh.start()
 
-	imgUpTh = ImgUploader(img_upload_queue)
+	imgUpTh = ImgUploader(img_upload_queue, album_id)
 	imgUpTh.setDaemon(True)
 	imgUpTh.start()
-
 
 
 	# imgUpTh.img_upload_queue.join()
@@ -294,7 +291,7 @@ if __name__ == "__main__":
 	sys.exit(2)
 
 	page1_watch_dog.join()
-	page_all_watch_dog.join()
+	# page_all_watch_dog.join()
 	imgDownLinkTh.page_queue.join()
 	imgDownTh.img_down_info_queue.join()
 	
