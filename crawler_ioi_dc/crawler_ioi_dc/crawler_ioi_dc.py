@@ -84,8 +84,9 @@ class ImgDownLinkCrawler(threading.Thread):
 	def run(self):
 		while True:
 			page_num = self.page_queue.get()
-			path = "http://gall.dcinside.com/board/view/?id=" + gall_owner + "&no=" + str(page_num)
-			
+			#http://gall.dcinside.com/mgallery/board/lists/?id=chungha
+#path = "http://gall.dcinside.com/board/view/?id=" + gall_owner + "&no=" + str(page_num)
+			path = "http://gall.dcinside.com/mgallery/board/view/?id=" + gall_owner + "&no=" + str(page_num)	
 			print("No : " + str(page_num) + "-----------")
 			
 			print(path)
@@ -93,11 +94,13 @@ class ImgDownLinkCrawler(threading.Thread):
 			try:
 				req = urllib2.Request(path, headers = hdr)
 				data = urllib2.urlopen(req, timeout = 5000).read()
+			
 			except:
 				print("Except!!! " + path)
 				self.page_queue.queue.put(tuple(info))
 
 			if data == "":
+				print("data eror")
 				continue				
 				
 			name_list = [];
@@ -121,6 +124,7 @@ class ImgDownLinkCrawler(threading.Thread):
 					if img.get('alt') != None : 
 						continue
 					if img_link[0:12] == "http://dcimg":
+						print("+++")
 						img_url_list.append(img_link)
 
 				
@@ -141,7 +145,7 @@ class ImgDownLinkCrawler(threading.Thread):
 			self.page_queue.task_done()
 
 class WatchGall(threading.Thread):
-	def __init__(self, gall_owner, page_func, start_page, sleep_count = 10, limit = 0):
+	def __init__(self, gall_owner, page_func, start_page = 1, sleep_count = 5, limit = 0):
 		threading.Thread.__init__(self)
 		self.gall_owner = gall_owner
 		self.page_func = page_func
@@ -153,11 +157,12 @@ class WatchGall(threading.Thread):
 		loop = 0
 		while True:
 			self.page = self.page_func(self.page)
-			if self.limit < loop:
+			if self.limit != 0 and self.limit < loop:
 				print("Approach Limit")
 				break;
 			loop += 1
-			path = "http://gall.dcinside.com/board/lists/?id=" + gall_owner + "&page=" + str(self.page)
+#http://gall.dcinside.com/mgallery/board/lists/?id=chungha
+			path = "http://gall.dcinside.com/mgallery/board/lists/?id=" + gall_owner + "&page=" + str(self.page)
 	
 			print(path)
 	
@@ -166,8 +171,8 @@ class WatchGall(threading.Thread):
 				data = urllib2.urlopen(req, timeout = 5000).read()
 				
 				if data == "":
+					print("false urlopen")
 					return False				
-	
 				soup = BeautifulSoup(data, 'html.parser');
 				for td in soup.find_all('td'):
 					if td.get('class')[0] == 't_notice' and td.contents[0] != "공지":
@@ -198,9 +203,9 @@ class ImgUploader(threading.Thread):
 
 		if os.path.exists(save_path):
 			save_list_file = open(save_path, "r")
-			for l in save_list_file.readlines():
-				if not l in complete_list : 
-					self.img_upload_queue.put(l.rsplit()[0])
+			#for l in save_list_file.readlines():
+			#	if not l in complete_list : 
+			#		self.img_upload_queue.put(l.rsplit()[0])
 
 			save_list_file.close()
 		
@@ -240,7 +245,7 @@ img_upload_queue = Queue.Queue()
 db_file = "./visit_db.txt"
 save_path = "./save_list.txt"
 complete_path = "./complete_list.txt"
-album_id = "oXvZ7"
+album_id = "QLUdt" #"oXvZ7"
 
 if __name__ == "__main__":
 	print("Hi DC");
@@ -249,10 +254,10 @@ if __name__ == "__main__":
 
 	argv = sys.argv
 	#youjung album : oXvZ7
-	gall_owner = "youjung"#argv[1]#"chungha" 
+	gall_owner = "chungha"#argv[1]#"chungha" 
 	#sys.stdout = Logger(gall_owner + "_log.txt")
 	
-	dirname = "./youjung_que/"
+	dirname = "./chungha_que/"
 	if not os.path.exists(dirname):
 			os.mkdir(dirname)
 
@@ -269,9 +274,9 @@ if __name__ == "__main__":
 	page1_watch_dog.setDaemon(True)
 	page1_watch_dog.start()
 
-	# page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, start_page = 2, limit = 50)
-	# page_all_watch_dog.setDaemon(True)
-	# page_all_watch_dog.start()
+	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, start_page = 1, limit = 1000)
+	page_all_watch_dog.setDaemon(True)
+	page_all_watch_dog.start()
 
 	imgDownLinkTh = ImgDownLinkCrawler(img_page_queue, img_down_info_queue, dirname)
 	imgDownLinkTh.setDaemon(True)
@@ -291,7 +296,7 @@ if __name__ == "__main__":
 	sys.exit(2)
 
 	page1_watch_dog.join()
-	# page_all_watch_dog.join()
+	page_all_watch_dog.join()
 	imgDownLinkTh.page_queue.join()
 	imgDownTh.img_down_info_queue.join()
 	
