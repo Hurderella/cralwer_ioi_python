@@ -28,9 +28,6 @@
     <Compile Include="crawler_ioi_dc.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="imgur_adapter.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="imgur_uploader.py">
       <SubType>Code</SubType>
     </Compile>
@@ -40,10 +37,7 @@
     <Compile Include="print_test.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="rename_part.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="thread_test.py">
+    <Compile Include="shell_util.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

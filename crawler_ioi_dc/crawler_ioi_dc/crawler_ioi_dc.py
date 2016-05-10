@@ -84,8 +84,8 @@ class ImgDownLinkCrawler(threading.Thread):
 	def run(self):
 		while True:
 			page_num = self.page_queue.get()
-			#http://gall.dcinside.com/mgallery/board/lists/?id=chungha
-#path = "http://gall.dcinside.com/board/view/?id=" + gall_owner + "&no=" + str(page_num)
+					
+			#path = "http://gall.dcinside.com/board/view/?id=" + gall_owner + "&no=" + str(page_num)
 			path = "http://gall.dcinside.com/mgallery/board/view/?id=" + gall_owner + "&no=" + str(page_num)	
 			print("No : " + str(page_num) + "-----------")
 			
@@ -94,14 +94,12 @@ class ImgDownLinkCrawler(threading.Thread):
 			try:
 				req = urllib2.Request(path, headers = hdr)
 				data = urllib2.urlopen(req, timeout = 5000).read()
-			
+				#time.sleep(100)
 			except:
 				print("Except!!! " + path)
-				self.page_queue.queue.put(tuple(info))
-
-			if data == "":
-				print("data eror")
-				continue				
+				self.page_queue.task_done()
+				self.page_queue.put(page_num)
+				continue
 				
 			name_list = [];
 			img_url_list = [];
@@ -124,7 +122,6 @@ class ImgDownLinkCrawler(threading.Thread):
 					if img.get('alt') != None : 
 						continue
 					if img_link[0:12] == "http://dcimg":
-						print("+++")
 						img_url_list.append(img_link)
 
 				
@@ -132,8 +129,8 @@ class ImgDownLinkCrawler(threading.Thread):
 				print("EMPTY NAME ERROR : " + e.message)
 
 			# result check
-	
-			for i in range(0, len(name_list)):
+			min = len(name_list) if len(name_list) < len(img_url_list) else len(img_url_list)
+			for i in range(0, min):
 				print("[%d] : %s" % (i, name_list[i]))
 				print("[%d] : %s" % (i, img_url_list[i]))
 				self.img_down_info_queue.put((name_list[i], img_url_list[i]))
@@ -152,7 +149,7 @@ class WatchGall(threading.Thread):
 		self.limit = limit
 		self.sleep_count = sleep_count
 		self.page = start_page
-
+		
 	def run(self):
 		loop = 0
 		while True:
@@ -161,7 +158,8 @@ class WatchGall(threading.Thread):
 				print("Approach Limit")
 				break;
 			loop += 1
-#http://gall.dcinside.com/mgallery/board/lists/?id=chungha
+			
+			#http://gall.dcinside.com/board/lists/?id=youjung
 			path = "http://gall.dcinside.com/mgallery/board/lists/?id=" + gall_owner + "&page=" + str(self.page)
 	
 			print(path)
@@ -174,19 +172,23 @@ class WatchGall(threading.Thread):
 					print("false urlopen")
 					return False				
 				soup = BeautifulSoup(data, 'html.parser');
-				for td in soup.find_all('td'):
-					if td.get('class')[0] == 't_notice' and td.contents[0] != "공지":
-						if not td.contents[0] in visit_list :
-							img_page_num = td.contents[0]
-							img_page_queue.put(img_page_num)
-							print(img_page_num)
-				
+	
+				for tr in soup.find_all('tr', {'onmouseover':"this.style.backgroundColor='#eae9f7'"}):
+					for td in tr.find_all('td'):
+						if td.get('class')[0] == 't_notice' and td.contents[0] == "공지":
+							break
+						elif td.get('class')[0] == 't_subject' :
+							link = td.contents[0].get('href')
+							img_page_num = link.split('&no=')[1].split('&page')[0]
+							if not img_page_num in visit_list:
+								img_page_queue.put(img_page_num)
+								print(img_page_num)
+
 			except:
 				print("Except!!! " + path)
 			finally:
 				time.sleep(self.sleep_count)
 			
-
 class ImgUploader(threading.Thread):
 	def __init__(self, _img_upload_queue, _album_id):
 		threading.Thread.__init__(self)
@@ -228,12 +230,15 @@ class ImgUploader(threading.Thread):
 			if remain < 2:
 				break
 
-			filename = os.path.basename(upload_file_path)
-			imgur_uploader.img_upload(self.client, upload_file_path, self.upload_album_id, filename)
+			filename, file_ext = os.path.splitext(upload_file_path)
+			if file_ext == '.GIF' or file_ext == '.gif':
+				print("!!! " + filename + "+" + file_ext)
+				filename = os.path.basename(upload_file_path)
+				imgur_uploader.img_upload(self.client, upload_file_path, self.upload_album_id, filename)
 
-			complete_list_file = open(complete_path, "a")
-			complete_list_file.writelines(upload_file_path + "\n")
-			complete_list_file.close()
+				complete_list_file = open(complete_path, "a")
+				complete_list_file.writelines(upload_file_path + "\n")
+				complete_list_file.close()
 
 			self.img_upload_queue.task_done()
 
@@ -268,13 +273,13 @@ if __name__ == "__main__":
 		for l in vl.readlines():
 			visit_list.append(l.rstrip())
 		vl.close()
-
+#print(visit_list)
 
 	page1_watch_dog = WatchGall(gall_owner, lambda x: 1, sleep_count = 10)
 	page1_watch_dog.setDaemon(True)
 	page1_watch_dog.start()
 
-	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, start_page = 1, limit = 1000)
+	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, start_page = 1, limit = 20000)
 	page_all_watch_dog.setDaemon(True)
 	page_all_watch_dog.start()
 
@@ -293,6 +298,7 @@ if __name__ == "__main__":
 
 	# imgUpTh.img_upload_queue.join()
 	imgUpTh.join()
+	print("imgUpTh Join")
 	sys.exit(2)
 
 	page1_watch_dog.join()
