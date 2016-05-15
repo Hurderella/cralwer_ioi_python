@@ -44,11 +44,13 @@ class ImgDownloader(threading.Thread):
 			try:
 				img_req = urllib2.Request(info[1], headers = hdr);
 				res = urllib2.urlopen(img_req, timeout = 5000)
-			
+				
+				filename, file_extension = os.path.splitext(info[0])
+				if file_extension != ".gif" and file_extension != ".GIF":
+					continue
 
 				ano_i = 1;
 				while (os.path.exists(info[0])):
-					filename, file_extension = os.path.splitext(info[0])
 					anoname = filename + "_" + str(ano_i) + file_extension
 					if os.path.exists(anoname) :
 						ano_i += 1
@@ -65,7 +67,7 @@ class ImgDownloader(threading.Thread):
 				save_list.writelines(str(info[0]) + "\n")
 				save_list.close()
 
-				self.img_up_queue.put(str(info[0]))
+				#self.img_up_queue.put(str(info[0]))
 			except:
 				print("Download url open Except!!!")
 				self.img_down_info_queue.put(tuple(info))
@@ -190,10 +192,11 @@ class WatchGall(threading.Thread):
 				time.sleep(self.sleep_count)
 			
 class ImgUploader(threading.Thread):
-	def __init__(self, _img_upload_queue, _album_id):
+	def __init__(self, _img_upload_queue, _album_id, upload_complete = None):
 		threading.Thread.__init__(self)
 		self.img_upload_queue = _img_upload_queue
 		self.upload_album_id = _album_id
+		self.upload_complete = upload_complete
 
 		complete_list = []
 		if os.path.exists(complete_path):
@@ -220,12 +223,23 @@ class ImgUploader(threading.Thread):
 		self.client.mashape_key = imgur_uploader.x_mash_key
 
 	def run(self):
+		remain = 0
 		while True:
 			upload_file_path = self.img_upload_queue.get()
 			print(">" + upload_file_path)
 
-			x_mash_info = imgur_uploader.get_x_mash_limit(self.client)
-			remain = int(x_mash_info[0])
+			try :
+				
+				x_mash_info = imgur_uploader.get_x_mash_limit(self.client)
+				remain = int(x_mash_info[0])
+
+			except Exception as e:
+				print("X_MASH Exception: " + e.message)
+				if remain < 10:
+					break
+				remain -= 1
+				print("Remain Pass")
+
 			print("upload remain : " + str(remain))
 			if remain < 2:
 				break
@@ -236,9 +250,12 @@ class ImgUploader(threading.Thread):
 				filename = os.path.basename(upload_file_path)
 				imgur_uploader.img_upload(self.client, upload_file_path, self.upload_album_id, filename)
 
-				complete_list_file = open(complete_path, "a")
-				complete_list_file.writelines(upload_file_path + "\n")
-				complete_list_file.close()
+				if self.upload_complete != None:
+					self.upload_complete(complete_path)
+
+				#complete_list_file = open(complete_path, "a")
+				#complete_list_file.writelines(upload_file_path + "\n")
+				#complete_list_file.close()
 
 			self.img_upload_queue.task_done()
 
@@ -275,11 +292,11 @@ if __name__ == "__main__":
 		vl.close()
 #print(visit_list)
 
-	page1_watch_dog = WatchGall(gall_owner, lambda x: 1, sleep_count = 10)
-	page1_watch_dog.setDaemon(True)
-	page1_watch_dog.start()
+	#page1_watch_dog = WatchGall(gall_owner, lambda x: 1, sleep_count = 10)
+	#page1_watch_dog.setDaemon(True)
+	#page1_watch_dog.start()
 
-	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, start_page = 1, limit = 20000)
+	page_all_watch_dog = WatchGall(gall_owner, lambda x: x + 1, start_page = 1, limit = 942)
 	page_all_watch_dog.setDaemon(True)
 	page_all_watch_dog.start()
 
@@ -291,17 +308,17 @@ if __name__ == "__main__":
 	imgDownTh.setDaemon(True)
 	imgDownTh.start()
 
-	imgUpTh = ImgUploader(img_upload_queue, album_id)
-	imgUpTh.setDaemon(True)
-	imgUpTh.start()
+	#imgUpTh = ImgUploader(img_upload_queue, album_id)
+	#imgUpTh.setDaemon(True)
+	#imgUpTh.start()
 
 
 	# imgUpTh.img_upload_queue.join()
-	imgUpTh.join()
-	print("imgUpTh Join")
-	sys.exit(2)
+	#imgUpTh.join()
+	#print("imgUpTh Join")
+	#sys.exit(2)
 
-	page1_watch_dog.join()
+	#page1_watch_dog.join()
 	page_all_watch_dog.join()
 	imgDownLinkTh.page_queue.join()
 	imgDownTh.img_down_info_queue.join()
