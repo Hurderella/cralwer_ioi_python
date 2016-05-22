@@ -2,12 +2,12 @@
 from bs4 import BeautifulSoup
 from imgurpython import ImgurClient
 import imgur_uploader
-import httplib, urllib, urllib2
+import urllib
 import os, sys
 import time
 import threading
-import Queue
-
+#import Queue
+import queue
 
 hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
 					'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -42,8 +42,8 @@ class ImgDownloader(threading.Thread):
 			print("path change => %s" % (info[1]))
 
 			try:
-				img_req = urllib2.Request(info[1], headers = hdr);
-				res = urllib2.urlopen(img_req, timeout = 5000)
+				img_req = urllib.request.Request(info[1], headers = hdr);#urllib2.Request(info[1], headers = hdr);
+				res = urllib.request.urlopen(img_req, timeout = 5000)#urllib2.urlopen(img_req, timeout = 5000)
 				
 				filename, file_extension = os.path.splitext(info[0])
 				if file_extension != ".gif" and file_extension != ".GIF":
@@ -68,8 +68,8 @@ class ImgDownloader(threading.Thread):
 				save_list.close()
 
 				#self.img_up_queue.put(str(info[0]))
-			except:
-				print("Download url open Except!!!")
+			except Exception as e:
+				print("Download url open Except!!! : ")
 				self.img_down_info_queue.put(tuple(info))
 				time.sleep(5)
 				
@@ -94,11 +94,12 @@ class ImgDownLinkCrawler(threading.Thread):
 			print(path)
 
 			try:
-				req = urllib2.Request(path, headers = hdr)
-				data = urllib2.urlopen(req, timeout = 5000).read()
+				req = urllib.request.Request(path, headers = hdr)
+				data = urllib.request.urlopen(req, timeout = 5000).read()
+				
 				#time.sleep(100)
-			except:
-				print("Except!!! " + path)
+			except :
+				print("Except!!! !!" + path)
 				self.page_queue.task_done()
 				self.page_queue.put(page_num)
 				continue
@@ -112,10 +113,11 @@ class ImgDownLinkCrawler(threading.Thread):
 					if l.get('class') != None and l.get('class')[0] == u'icon_pic' :
 						for link in l.contents:
 							filename, file_extension = os.path.splitext(link.contents[0])
+							print(file_extension)
 							if len(file_extension) > 5 or len(file_extension) < 4 :
 								raise IndexError
-							name = gall_owner + "_IMG_" + str(page_num) + file_extension.encode("euc-kr")
-							print(name)
+							name = gall_owner + "_IMG_" + str(page_num) + file_extension.encode("euc-kr").decode()
+							print(name + "----------")
 							
 							name_list.append(self.destDir + name)
 					
@@ -129,6 +131,7 @@ class ImgDownLinkCrawler(threading.Thread):
 				
 			except IndexError as e:
 				print("EMPTY NAME ERROR : " + e.message)
+				
 
 			# result check
 			min = len(name_list) if len(name_list) < len(img_url_list) else len(img_url_list)
@@ -167,8 +170,8 @@ class WatchGall(threading.Thread):
 			print(path)
 	
 			try:
-				req = urllib2.Request(path, headers = hdr)
-				data = urllib2.urlopen(req, timeout = 5000).read()
+				req = urllib.request.Request(path, headers = hdr)
+				data = urllib.request.urlopen(req, timeout = 5000).read()
 				
 				if data == "":
 					print("false urlopen")
@@ -261,9 +264,9 @@ class ImgUploader(threading.Thread):
 
 
 visit_list = []
-img_page_queue = Queue.Queue()
-img_down_info_queue = Queue.Queue()
-img_upload_queue = Queue.Queue()
+img_page_queue = queue.Queue()#Queue.Queue()
+img_down_info_queue = queue.Queue()#Queue.Queue()
+img_upload_queue = queue.Queue()#Queue.Queue()
 db_file = "./visit_db.txt"
 save_path = "./save_list.txt"
 complete_path = "./complete_list.txt"
@@ -271,8 +274,6 @@ album_id = "QLUdt" #"oXvZ7"
 
 if __name__ == "__main__":
 	print("Hi DC");
-	reload(sys)
-	sys.setdefaultencoding('utf-8')
 
 	argv = sys.argv
 	#youjung album : oXvZ7

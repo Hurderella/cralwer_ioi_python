@@ -9,6 +9,9 @@ ehthumbs.db
 *.png
 *.txt
 *.out
+*.avi
+*.zip
+*.exe
 
 # Folder config file
 Desktop.ini

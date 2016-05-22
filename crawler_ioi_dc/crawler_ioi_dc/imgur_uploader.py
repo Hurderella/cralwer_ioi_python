@@ -1,5 +1,6 @@
 from imgurpython import ImgurClient
-import urllib2
+#import urllib2
+import urllib
 import os
 import json
 import sys
